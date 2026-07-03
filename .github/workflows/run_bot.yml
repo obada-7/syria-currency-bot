@@ -1,0 +1,25 @@
+name: Syria Currency Bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # محاولة التشغيل تلقائياً كل 5 دقائق (حسب المتاح مجاناً من سيرفرات جيت هاب)
+  workflow_dispatch: # يتيح لك هذا الخيار تشغيل السكربت يدوياً في أي وقت بضغطة زر للتجربة
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Price Updater
+      run: node index.js
