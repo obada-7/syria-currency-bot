@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const axios = require("axios");
 
-// قراءة المفتاح من المتغير السري الذي أضفته في الـ Settings
+// قراءة المفتاح من المتغير السري FIREBASE_KEY الذي أضفته في الإعدادات
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
 admin.initializeApp({
@@ -15,19 +15,36 @@ const ref = db.ref("MarketPrices");
 async function updatePrices() {
   try {
     console.log("جاري جلب الأسعار...");
+    
+    // استخدام Headers إضافية لتجاوز حظر الموقع 403
     const response = await axios.get("https://sp-today.com/api/currates", {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://sp-today.com/'
-      }
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://sp-today.com/',
+        'Origin': 'https://sp-today.com/'
+      },
+      timeout: 20000
     });
 
     const rates = response.data;
-    if (!rates || !Array.isArray(rates)) return;
+    if (!rates || !Array.isArray(rates)) {
+      console.log("لم يتم جلب بيانات صحيحة.");
+      return;
+    }
 
-    let updateData = { timestamp: new Date().toLocaleTimeString('ar-SY', { timeZone: 'Asia/Damascus' }) };
+    let updateData = { 
+      timestamp: new Date().toLocaleTimeString('ar-SY', { timeZone: 'Asia/Damascus' }) 
+    };
     
-    const keyMapping = { 'usd': 'USD', 'eur': 'EUR', 'try': 'TRY', 'gold_24': 'G24', 'gold_21': 'G21', 'gold_18': 'G18' };
+    const keyMapping = { 
+      'usd': 'USD', 
+      'eur': 'EUR', 
+      'try': 'TRY', 
+      'gold_24': 'G24', 
+      'gold_21': 'G21', 
+      'gold_18': 'G18' 
+    };
     
     rates.forEach(item => {
       if (item.code && keyMapping[item.code.toLowerCase()]) {
@@ -40,9 +57,10 @@ async function updatePrices() {
     });
 
     await ref.update(updateData);
-    console.log("تم التحديث بنجاح!");
+    console.log("تم تحديث الأسعار في Firebase بنجاح!");
   } catch (error) {
-    console.error("خطأ:", error.message);
+    console.error("خطأ أثناء التنفيذ:", error.message);
   }
 }
+
 updatePrices();
