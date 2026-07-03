@@ -1,8 +1,14 @@
 const admin = require("firebase-admin");
 const axios = require("axios");
 
-// جلب المفتاح السري من بيئة النظام
-const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+// فك تشفير المفتاح الذي قمت بترميزه بـ Base64
+const decodedKey = Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf8');
+
+const serviceAccount = {
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  private_key: decodedKey
+};
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -14,18 +20,10 @@ const ref = db.ref("MarketPrices");
 
 async function updatePrices() {
   try {
-    console.log("جاري جلب الأسعار...");
     const response = await axios.get("https://sp-today.com/api/currates", {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://sp-today.com/'
-      },
-      timeout: 20000
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
-
     const rates = response.data;
-    if (!Array.isArray(rates)) throw new Error("البيانات غير صحيحة");
-
     let updateData = { timestamp: new Date().toLocaleTimeString('ar-SY', { timeZone: 'Asia/Damascus' }) };
     
     const mapping = { 'usd': 'USD', 'eur': 'EUR', 'try': 'TRY', 'gold_24': 'G24', 'gold_21': 'G21', 'gold_18': 'G18' };
@@ -41,10 +39,9 @@ async function updatePrices() {
     });
 
     await ref.update(updateData);
-    console.log("تم التحديث بنجاح");
+    console.log("تم التحديث بنجاح!");
   } catch (error) {
     console.error("خطأ:", error.message);
-    process.exit(1);
   }
 }
 
